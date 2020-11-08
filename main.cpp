@@ -196,9 +196,9 @@ Cloud clouds[CLOUD_AMOUNT];
 						updateImage();
 					}
 				}
-				if (checkBoundary[direction](x)) {
+				if (reachedBoundary[direction](x)) {
 					direction = 1 - direction;
-					speedX = - speedX;
+					speedX = -speedX;
 					updateImage();
 				}
 				updatePosition();	
@@ -221,18 +221,28 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
 		 
 		static bool reachedRightBoundary(float x) {
- 			return x < RIGHT_BOUNDARY;
+ 			return x > RIGHT_BOUNDARY;
  		} 
  		
- 		static bool (*checkBoundary[2])(float x);
+ 		static bool (*reachedBoundary[2])(float x);
  };
  Image Frog::imgSave[2][2][2];
  float Frog::mapOffset[2] = {-1.0f, 1.0f};
  float Frog::mapBaseAngle[2] = {160.0f, 20.0f};
- bool (*Frog::checkBoundary[2])(float x) = {Frog::reachedLeftBoundary, Frog::reachedRightBoundary};
+ bool (*Frog::reachedBoundary[2])(float x) = {Frog::reachedLeftBoundary, Frog::reachedRightBoundary};
  
  Frog frogs[2];
  
+ class Line {
+ 	public:
+ 		static Image imageSave[2];
+ 		static Rect rect;
+ 		Image *img;
+ };
+ 
+ 
+ 
+/====================================================/ 
  
 void Display() {
 	glClear(GL_COLOR_BUFFER_BIT);
