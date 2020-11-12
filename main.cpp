@@ -17,6 +17,9 @@
 #define MAX_X 30
 #define MAX_Y 24
 
+#define PI 3.141592
+#define RAD 57.295780 
+
 Rect rectBackground = {0, 720, 48, 384}; 
 Rect rectGround = {0, 720, 0, 48};
 
@@ -165,17 +168,20 @@ Cloud clouds[CLOUD_AMOUNT];
  			Map_Texture(img);
  			Draw_Rect(&rect);
  		}
-		 
+		  
 		 void jump() {
+		 	//printf("\n jump called, isJumping = %d", isJumping);
 		 	if (!isJumping) {
 		 		isJumping = true;
 		 		animation = 1;
 		 		updateImage();
-		 	}
+		 		//printf("\n jumping");
+		 	} 
 		 }
 		 
 		 void update() {
 		 	if (isJumping) {
+		 		//printf("\n update jumping, isJumping = %d", isJumping);
 		 		float oldY = y;
 		 		x += speedX;
 		 		y += speedY;
@@ -207,14 +213,41 @@ Cloud clouds[CLOUD_AMOUNT];
 		 
 		 void keyDown() {
 		 	isKeyPressed = true;
+		 	//printf("\nkey pressed");
+		 	//printf("%d", isJumping);
 		 }		
 		 
 		 void keyUp() {
 		 	isKeyPressed = false;
-		 	speedX = 10.0f;
-		 	speedY = 10.0f;
-		 	jump();
+		 	//printf("\nkey released");
+		 	//printf("%d", isJumping);
+		 	if (!isJumping) {
+		 		speedY = 10.0f;
+		 		if (direction == 1) {
+		 			speedX = 10.0f;
+		 		} else {
+		 			speedX = -10.0f;
+		 		}
+		 	//if (!isJumping) 
+		 		jump();
+			 }
+		 	
 		 }
+		 
+		 void prepareJump() {
+		 	if (action == 0) {
+		 		action = 1;
+		 		angleDirection = direction;
+		 		angle = mapBaseAngle[direction];
+		 	} 
+		 }
+		 
+		 void endPrepareJump() {
+		 	if (action == 1) {
+		 		action = 2;
+		 	}
+		 }
+		 
 		 
  		static bool reachedLeftBoundary(float x) {
  			return x < LEFT_BOUNDARY;
@@ -225,24 +258,85 @@ Cloud clouds[CLOUD_AMOUNT];
  		} 
  		
  		static bool (*reachedBoundary[2])(float x);
+ 		
+ 		static bool reachedMaxAngleLeft(float angle) {
+ 			return angle <= 110.0f;
+ 		}
+ 		
+ 		static bool reachedMinAngleLeft(float angle) {
+ 			return angle >= 160.0f;
+ 		}
+ 		
+ 		static bool reachedMaxAngleRight(float angle) {
+ 			return angle >= 70.0f;
+ 		}
+ 		
+ 		static bool reachedMinAngleRight(float angle) {
+ 			return angle <= 20.0f; 
+ 		}
+ 		
+ 		static bool (*reachedAngle[2][2])(float angle);
+ 		
  };
  Image Frog::imgSave[2][2][2];
  float Frog::mapOffset[2] = {-1.0f, 1.0f};
  float Frog::mapBaseAngle[2] = {160.0f, 20.0f};
  bool (*Frog::reachedBoundary[2])(float x) = {Frog::reachedLeftBoundary, Frog::reachedRightBoundary};
+ bool (*Frog::reachedAngle[2][2])(float angle) = {
+ 	{reachedMaxAngleLeft, reachedMinAngleLeft},
+ 	{reachedMaxAngleRight, reachedMinAngleRight}
+ };
  
  Frog frogs[2];
  
  class Line {
  	public:
- 		static Image imageSave[2];
+ 		static Image imgSave[2];
  		static Rect rect;
  		Image *img;
+ 		float x, y, angle;
+ 		int player;
+ 		
+ 		Line(int _player, float _x, float _y, float _angle) {
+ 			player = _player;
+ 			x = _x;
+ 			y = _y;
+ 			angle = _angle;
+ 			img = &imgSave[player];
+ 		}
+ 		
+ 		static void loadImage() {
+ 			Image img;
+ 			Load_Texture(&img, "img/Lines.png");
+ 			Crop_Image(&img, &imgSave[0], 0, 0, 8, 4);
+ 			Crop_Image(&img, &imgSave[1], 0, 4, 8, 4);
+ 			Zoom_Image(&imgSave[0], SCALE);
+ 			Zoom_Image(&imgSave[1], SCALE);
+ 			Delete_Image(&img);
+ 			rect.Left = -12.0f;
+ 			rect.Right = 12.0f;
+ 			rect.Bottom = -8.0f;
+ 			rect.Top = 8.0f;
+ 		}
+ 		
+ 		void draw() {
+ 			glTranslatef(x, y, 0.0f);
+ 			glRotatef(angle, 0.0f, 0.0f, 1.0f);
+ 			Map_Texture(img);
+ 			Draw_Rect(&rect);
+ 			glLoadIdentity();
+ 		}
+ 		
  };
+ Image Line::imgSave[2];
+ Rect Line::rect;
+ 
+ std::vector<Line> lines;
  
  
  
-/====================================================/ 
+ 
+//====================================================// 
  
 void Display() {
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -251,6 +345,10 @@ void Display() {
 	Draw_Rect(&rectBackground);
 	Map_Texture(&imgGround);
 	Draw_Rect(&rectGround);
+	for (Line line : lines) {
+		line.draw();
+	}
+	
 	for (int i = 0; i < CLOUD_AMOUNT; i++) 
 		clouds[i].draw();
 		
@@ -308,6 +406,7 @@ void initGame() {
 	initPlatformers();
 	initClouds(); 
 	initFrogs();
+	Line::loadImage();
 }
 
 
@@ -377,3 +476,11 @@ int main(int argc, char **argv) {
 	glutMainLoop();
 	return 0;
 }
+
+
+//TODO
+/* --
+	- Select jump direction using keyboard
+	- Select difficult mode (moving platformers, moving flies);
+
+-- */
