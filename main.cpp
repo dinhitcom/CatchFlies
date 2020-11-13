@@ -39,7 +39,6 @@ class Platformer {
 			Zoom_Image(&imageHolder, SCALE);
 		}
 		 
-		
 		Rect rect;
 		Image *img;
 		void init(int _x, int _y) {
@@ -98,10 +97,8 @@ class Cloud {
 			if (x < -120.0f)
 				x += 1080.0f;
 			updatePosition();
-		}
-		
+		}	
 };
-
 Image Cloud::imageHolder;
 Cloud clouds[CLOUD_AMOUNT];
 
@@ -171,7 +168,6 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  		Fly(float _x, float _y, int _region) {
- 			//printf("fly init");
  			x = _x + rand() % 41 - 20;
  			y = _y + rand() % 41 - 20;
  			velocityX = maxVelocityX;
@@ -199,26 +195,21 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  		void update() {
- 		//	printf("\n %f",scale);
  			 if (!isAlive && scale < 1.0f) {
  			 	scale = scale + 0.05f;
- 			 	//printf("\n %f",scale);
  			 } else {
  			 	isAlive = true;
  			 }
- 			 
  			 x += velocityX;
  			 y += velocityY;
  			 velocityX += accelerationX;
  			 velocityY += accelerationY;
- 			 
  			 if (velocityX >= maxVelocityX || velocityX <= -maxVelocityX) {
  			 	accelerationX = velocityX < 0 ? baseAccelerationX : -baseAccelerationX;
  			 }
  			 if (velocityY >= maxVelocityY || velocityY <= -maxVelocityY) {
  			 	accelerationY = velocityY < 0 ? baseAccelerationY : -baseAccelerationY;
  			 }
- 			 
  			 timer++;
  			 if (timer == 6) {
  			 	timer = 0;
@@ -261,14 +252,12 @@ Cloud clouds[CLOUD_AMOUNT];
 		int maxFliesAmount, spawnPointsCounter, timer; 
 		
 		FlySpawner (int _maxFliesAmount) {
-			//printf("Fly spawned");
 			maxFliesAmount = _maxFliesAmount;
 			timer = 60;
 			spawnPointsCounter = sizeof(spawnPoints) / sizeof(SpawnPoint);
 		}
 		
 		void update() {
-			//printf("Fly spawner update called");
 			timer++;
 			if (timer == 90) {
 				timer = 0;
@@ -324,8 +313,6 @@ Cloud clouds[CLOUD_AMOUNT];
  			Flip_Horizontal(&imageHolder[1][1][1], &imageHolder[1][0][1]);
  			Delete_Image(&img);        
 		}
-			                   
- 		
  		
  		void init(int _player) {
  			player = _player;
@@ -389,7 +376,6 @@ Cloud clouds[CLOUD_AMOUNT];
 		 
 		 void update() {
 		 	if (!isJumping) {
-		 		//printf("\n vx = %f, vy = %f, gravity = %f", velocityX, velocityY, gravity);
 		 		if (isKeyPressed) {
 		 			prepareJump();
 		 		} else {
@@ -504,10 +490,6 @@ Cloud clouds[CLOUD_AMOUNT];
  };
  
  Frog frogs[2];
- 
- 
- 
- 
  
  
 //====================================================// 
