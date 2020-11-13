@@ -33,10 +33,10 @@ const float RIGHT_BOUNDARY = 690.0f;
 
 class Platformer {
 	public:
-		static Image imgSave;
+		static Image imageHolder;
 		static void loadImage() {
-			Load_Texture_Swap(&imgSave, "img/Platformer.png");
-			Zoom_Image(&imgSave, SCALE);
+			Load_Texture_Swap(&imageHolder, "img/Platformer.png");
+			Zoom_Image(&imageHolder, SCALE);
 		}
 		 
 		
@@ -44,7 +44,7 @@ class Platformer {
 		Image *img;
 		void init(int _x, int _y) {
 			Map[_y][_x] = Map[_y][_x+1] = Map[_y][_x+2] = Map[_y][_x+3] = 1;  
-			img = &imgSave;
+			img = &imageHolder;
 			float x = (_x + 2) * CELL_SIZE;
 			float y = _y * CELL_SIZE;
 			rect.Left = x - img->w / 2;
@@ -58,16 +58,16 @@ class Platformer {
 			Draw_Rect(&rect);
 		}
 };
-Image Platformer::imgSave;
+Image Platformer::imageHolder;
 Platformer platformers[PLATFORMER_AMOUNT];
 
 class Cloud {
 	public:
-		static Image imgSave;
+		static Image imageHolder;
 		
 		static void loadImage() {
-			Load_Texture_Swap(&imgSave, "img/Cloud.png");
-			Zoom_Image(&imgSave, SCALE);
+			Load_Texture_Swap(&imageHolder, "img/Cloud.png");
+			Zoom_Image(&imageHolder, SCALE);
 		}
 		
 		Rect rect;
@@ -75,7 +75,7 @@ class Cloud {
 		float x, y; 
 		
 		void init(float _x, float _y) {
-			img = &imgSave;
+			img = &imageHolder;
 			x = _x;
 			y = _y;
 			updatePosition();
@@ -102,12 +102,12 @@ class Cloud {
 		
 };
 
-Image Cloud::imgSave;
+Image Cloud::imageHolder;
 Cloud clouds[CLOUD_AMOUNT];
 
  class Line {
  	public:
- 		static Image imgSave[2];
+ 		static Image imageHolder[2];
  		static Rect rect;
  		Image *img;
  		float x, y, angle;
@@ -118,16 +118,16 @@ Cloud clouds[CLOUD_AMOUNT];
  			x = _x;
  			y = _y;
  			angle = _angle;
- 			img = &imgSave[player];
+ 			img = &imageHolder[player];
  		}
  		
  		static void loadImage() {
  			Image img;
  			Load_Texture(&img, "img/Lines.png");
- 			Crop_Image(&img, &imgSave[0], 0, 0, 8, 4);
- 			Crop_Image(&img, &imgSave[1], 0, 4, 8, 4);
- 			Zoom_Image(&imgSave[0], SCALE);
- 			Zoom_Image(&imgSave[1], SCALE);
+ 			Crop_Image(&img, &imageHolder[0], 0, 0, 8, 4);
+ 			Crop_Image(&img, &imageHolder[1], 0, 4, 8, 4);
+ 			Zoom_Image(&imageHolder[0], SCALE);
+ 			Zoom_Image(&imageHolder[1], SCALE);
  			Delete_Image(&img);
  			rect.Left = -12.0f;
  			rect.Right = 12.0f;
@@ -144,13 +144,153 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  };
- Image Line::imgSave[2];
+ Image Line::imageHolder[2];
  Rect Line::rect;
  std::vector<Line> lines;
  
+ class Fly {
+ 	public:
+ 		static Image imageHolder[2];
+ 		static float baseAccelerationX, baseAccelerationY;
+ 		static float maxVelocityX, maxVelocityY;
+ 		Rect rect;
+ 		Image *img;
+ 		float x, y, velocityX, velocityY, accelerationX, accelerationY, scale;
+ 		int timer, animation, region;
+ 		bool isAlive;
+ 		
+ 		static void loadImage() {
+ 			Image img;
+ 			Load_Texture(&img, "img/Fly.png");
+ 			Crop_Image(&img, &imageHolder[0], 0, 0, 10, 6);
+ 			Crop_Image(&img, &imageHolder[1], 0, 6, 10, 6);
+ 			Swap_Image(imageHolder[0].img, 10, 6);
+ 			Swap_Image(imageHolder[1].img, 10, 6);
+ 			Zoom_Image(&imageHolder[0], SCALE);
+ 			Zoom_Image(&imageHolder[1], SCALE);
+ 		}
+ 		
+ 		Fly(float _x, float _y, int _region) {
+ 			x = _x + rand() % 41 - 20;
+ 			y = _y + rand() % 41 - 20;
+ 			velocityX = maxVelocityX;
+ 			velocityY = 0.0f;
+ 			accelerationX = baseAccelerationX;
+ 			accelerationY = baseAccelerationY;
+ 			region = _region;
+ 			timer = 0;
+ 			animation = 0;
+ 			scale = 0.0f;
+ 			isAlive = false;
+ 			img = &imageHolder[0];
+ 		}
+ 		
+ 		void updatePosition() {
+ 			rect.Left = x - img->w /2 * scale;
+ 			rect.Right = rect.Left + img->w * scale;
+ 			rect.Bottom = y - img->h / 2 * scale;
+ 			rect.Top = rect.Bottom + img->h * scale;
+ 		}
+ 		
+ 		void draw() {
+ 			Map_Texture(img);
+ 			Draw_Rect(&rect);
+ 		}
+ 		
+ 		void update() {
+ 			 if (!isAlive && scale < 1.0f) {
+ 			 	scale += 0.05f;
+ 			 } else {
+ 			 	isAlive = true;
+ 			 }
+ 			 
+ 			 x += velocityX;
+ 			 y += velocityY;
+ 			 velocityX += accelerationX;
+ 			 velocityY += accelerationY;
+ 			 
+ 			 if (velocityX >= maxVelocityX || velocityX <= -maxVelocityX) {
+ 			 	accelerationX = velocityX < 0 ? baseAccelerationX : -baseAccelerationX;
+ 			 }
+ 			 if (velocityY >= maxVelocityY || velocityY <= -maxVelocityY) {
+ 			 	accelerationY = velocityY < 0 ? baseAccelerationY : -baseAccelerationY;
+ 			 }
+ 			 
+ 			 timer++;
+ 			 if (timer == 6) {
+ 			 	timer = 0;
+ 			 	animation = 1 - animation;
+ 			 	img = &imageHolder[animation];
+ 			 }
+ 			 updatePosition();
+ 		}
+ 		
+ 		bool isCaught(float _x, float _y ) {
+ 			if (_x - 20.0f < x && _x + 20.0f > x && _y - 6.0f < y && _y + 34.0f > y) {
+ 				return true;
+ 			} else {
+ 				return false;
+ 			}
+ 		}
+ }; 
+ Image Fly::imageHolder[2];
+ float Fly::baseAccelerationX = 0.015f;
+ float Fly::baseAccelerationY = 0.02f;
+ float Fly::maxVelocityX = 0.3f;
+ float Fly::maxVelocityY = 0.8f;
+ std::vector<Fly> flies;
+ 
+ class SpawnPoint {
+ 	public: 
+ 		float x, y;
+ 		SpawnPoint(float _x, float _y) {
+ 			x = _x;
+ 			y = _y;
+ 		}
+ };
+ 
+ class FlySpawner {
+ 	public:
+ 		SpawnPoint spawnPoints[6] = {
+		 	SpawnPoint(100.0f, 300.0f), SpawnPoint(620.0f, 300.0f), SpawnPoint(360.0f, 280.0f),
+		 	SpawnPoint(360.0f, 130.0f), SpawnPoint(100.0f, 120.0f), SpawnPoint(620.0f, 120.0f)
+		 }; 
+		int maxFliesAmount, spawnPointsCounter, timer; 
+		
+		FlySpawner (int _maxFliesAmount) {
+			printf("Fly spawned");
+			maxFliesAmount = _maxFliesAmount;
+			timer = 60;
+			spawnPointsCounter = sizeof(spawnPoints) / sizeof(SpawnPoint);
+		}
+		
+		void update() {
+			timer++;
+			if (timer == 90) {
+				timer = 0;
+				if (flies.size() < maxFliesAmount) {
+					bool isOccupated;
+					int region;
+					do {
+						isOccupated = false;
+						region = rand() % spawnPointsCounter;
+						for (Fly fly : flies) {
+							if (fly.region == region) {
+								isOccupated = true;
+								break;
+							}
+						}
+					} while (isOccupated);
+					flies.push_back(Fly(spawnPoints[region].x, spawnPoints[region].y, region));
+				}
+			}
+		}
+ };
+ FlySpawner FlySpawner(2);
+ 
  class Frog {
  	public:
- 		static Image imgSave[2][2][2];
+ 		static Image imageHolder[2][2][2];
  		static float mapOffset[2];
  		static float mapBaseAngle[2];
  		Rect rect;
@@ -162,22 +302,22 @@ Cloud clouds[CLOUD_AMOUNT];
  		static void loadImage() {
  			Image img;
  			Load_Texture(&img, "img/Frogs.png");
- 			Crop_Image(&img, &imgSave[0][1][0], 0, 0, 18, 16);
- 			Crop_Image(&img, &imgSave[0][1][1], 0, 16, 18, 16);
- 			Crop_Image(&img, &imgSave[1][1][0], 18, 0, 18, 16);
- 			Crop_Image(&img, &imgSave[1][1][1], 18, 16, 18, 16);
- 			Swap_Image(imgSave[0][1][0].img, 18, 16);
- 			Swap_Image(imgSave[0][1][1].img, 18, 16);
- 			Swap_Image(imgSave[1][1][0].img, 18, 16);
- 			Swap_Image(imgSave[1][1][1].img, 18, 16);
- 			Zoom_Image(&imgSave[0][1][0], SCALE);
- 			Zoom_Image(&imgSave[0][1][1], SCALE);
- 			Zoom_Image(&imgSave[1][1][0], SCALE);
- 			Zoom_Image(&imgSave[1][1][1], SCALE);
- 			Flip_Horizontal(&imgSave[0][1][0], &imgSave[0][0][0]);
- 			Flip_Horizontal(&imgSave[0][1][1], &imgSave[0][0][1]);
- 			Flip_Horizontal(&imgSave[1][1][0], &imgSave[1][0][0]);
- 			Flip_Horizontal(&imgSave[1][1][1], &imgSave[1][0][1]);
+ 			Crop_Image(&img, &imageHolder[0][1][0], 0, 0, 18, 16);
+ 			Crop_Image(&img, &imageHolder[0][1][1], 0, 16, 18, 16);
+ 			Crop_Image(&img, &imageHolder[1][1][0], 18, 0, 18, 16);
+ 			Crop_Image(&img, &imageHolder[1][1][1], 18, 16, 18, 16);
+ 			Swap_Image(imageHolder[0][1][0].img, 18, 16);
+ 			Swap_Image(imageHolder[0][1][1].img, 18, 16);
+ 			Swap_Image(imageHolder[1][1][0].img, 18, 16);
+ 			Swap_Image(imageHolder[1][1][1].img, 18, 16);
+ 			Zoom_Image(&imageHolder[0][1][0], SCALE);
+ 			Zoom_Image(&imageHolder[0][1][1], SCALE);
+ 			Zoom_Image(&imageHolder[1][1][0], SCALE);
+ 			Zoom_Image(&imageHolder[1][1][1], SCALE);
+ 			Flip_Horizontal(&imageHolder[0][1][0], &imageHolder[0][0][0]);
+ 			Flip_Horizontal(&imageHolder[0][1][1], &imageHolder[0][0][1]);
+ 			Flip_Horizontal(&imageHolder[1][1][0], &imageHolder[1][0][0]);
+ 			Flip_Horizontal(&imageHolder[1][1][1], &imageHolder[1][0][1]);
  			Delete_Image(&img);        
 		}
 			                   
@@ -198,7 +338,7 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  		void updateImage() {
- 			img = &imgSave[player][direction][animation];
+ 			img = &imageHolder[player][direction][animation];
  		}
  		
  		void updatePosition() {
@@ -227,15 +367,15 @@ Cloud clouds[CLOUD_AMOUNT];
 		 
 		 void keyUp() {
 		 	isKeyPressed = false;
-		 	if (!isJumping) {
-		 		//velocityY = 10.0f;
-		 		if (direction == 1) {
-		 			velocityX = 10.0f;
-		 		} else {
-		 			velocityX = -10.0f;
-		 		}
-		 		jump();
-			 }
+//		 	if (!isJumping) {
+//		 		//velocityY = 10.0f;
+//		 		if (direction == 1) {
+//		 			velocityX = 10.0f;
+//		 		} else {
+//		 			velocityX = -10.0f;
+//		 		}
+//		 		jump();
+//			 }
 		 	
 		 }
 		 
@@ -255,7 +395,7 @@ Cloud clouds[CLOUD_AMOUNT];
 		 
 		 void update() {
 		 	if (!isJumping) {
-		 		printf("\n vx = %f, vy = %f, gravity = %f", velocityX, velocityY, gravity);
+		 		//printf("\n vx = %f, vy = %f, gravity = %f", velocityX, velocityY, gravity);
 		 		if (isKeyPressed) {
 		 			prepareJump();
 		 		} else {
@@ -349,8 +489,8 @@ Cloud clouds[CLOUD_AMOUNT];
  		static bool (*reachedAngle[2][2])(float angle);
  		
  };
- Image Frog::imgSave[2][2][2];
- float Frog::mapOffset[2] = {-1.0f, 1.0f};
+ Image Frog::imageHolder[2][2][2];
+ float Frog::mapOffset[2] = {-1.5f, 1.5f};
  float Frog::mapBaseAngle[2] = {160.0f, 20.0f};
  bool (*Frog::reachedBoundary[2])(float x) = {Frog::reachedLeftBoundary, Frog::reachedRightBoundary};
  bool (*Frog::reachedAngle[2][2])(float angle) = {
@@ -372,17 +512,25 @@ void Display() {
 	glLoadIdentity();
 	Map_Texture(&imgBackground);
 	Draw_Rect(&rectBackground);
-	Map_Texture(&imgGround);
-	Draw_Rect(&rectGround);
+	
 	for (Line line : lines) {
 		line.draw();
 	}
-	//printf("%d",lines.size());
-	for (int i = 0; i < CLOUD_AMOUNT; i++) 
+	
+	Map_Texture(&imgGround);
+	Draw_Rect(&rectGround);
+	
+	for (int i = 0; i < CLOUD_AMOUNT; i++) {
 		clouds[i].draw();
+	}
 		
-	for (int i = 0; i < PLATFORMER_AMOUNT; i++) 
+	for (int i = 0; i < flies.size(); i++) {
+		flies[i].draw();
+	}
+	
+	for (int i = 0; i < PLATFORMER_AMOUNT; i++) {
 		platformers[i].draw();
+	}
 	
 	frogs[0].draw();
 	frogs[1].draw();
@@ -399,11 +547,13 @@ void loadBackground() {
 
 void initMap() {
 	for (int i = 0; i < 2; i++)
-		for (int j = 0; j < MAX_X; j++)
+		for (int j = 0; j < MAX_X; j++) {
 			Map[i][j] = 1;
+		}
 	for (int i = 2; i < MAX_Y; i++)
-	 	for (int j = 0; j < MAX_X; j++)
+	 	for (int j = 0; j < MAX_X; j++) {
 	 		Map[i][j] = 0;
+	 	}
 }
 
 void initPlatformers() {
@@ -436,6 +586,7 @@ void initGame() {
 	initClouds(); 
 	initFrogs();
 	Line::loadImage();
+	Fly::loadImage();
 }
 
 
@@ -457,8 +608,13 @@ void initGL() {
 }
 
 void timer(int value) {
-	for (int i = 0; i < CLOUD_AMOUNT; i++) 
+	for (int i = 0; i < CLOUD_AMOUNT; i++) {
 		clouds[i].updatePositionX();
+	}
+	FlySpawner.update();
+	for (Fly fly : flies) {
+		fly.update();
+	}
 	lines.clear();
 	frogs[0].update();
 	frogs[1].update();
@@ -511,6 +667,9 @@ int main(int argc, char **argv) {
 //TODO
 /* --
 	- Select jump direction using keyboard
-	- Select difficult mode (moving platformers, moving flies);
-
+	- loading screen, menu;
+	- select map;
+	- credits;
+	- Select difficult mode (moving platformers, moving flies, faster aiming (2.0f);
+	- Select jump aiming mode: auto, manual arrow up/down;
 -- */
