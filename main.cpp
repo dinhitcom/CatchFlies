@@ -171,6 +171,7 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  		Fly(float _x, float _y, int _region) {
+ 			//printf("fly init");
  			x = _x + rand() % 41 - 20;
  			y = _y + rand() % 41 - 20;
  			velocityX = maxVelocityX;
@@ -198,8 +199,10 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  		void update() {
+ 		//	printf("\n %f",scale);
  			 if (!isAlive && scale < 1.0f) {
- 			 	scale += 0.05f;
+ 			 	scale = scale + 0.05f;
+ 			 	//printf("\n %f",scale);
  			 } else {
  			 	isAlive = true;
  			 }
@@ -258,13 +261,14 @@ Cloud clouds[CLOUD_AMOUNT];
 		int maxFliesAmount, spawnPointsCounter, timer; 
 		
 		FlySpawner (int _maxFliesAmount) {
-			printf("Fly spawned");
+			//printf("Fly spawned");
 			maxFliesAmount = _maxFliesAmount;
 			timer = 60;
 			spawnPointsCounter = sizeof(spawnPoints) / sizeof(SpawnPoint);
 		}
 		
 		void update() {
+			//printf("Fly spawner update called");
 			timer++;
 			if (timer == 90) {
 				timer = 0;
@@ -367,16 +371,6 @@ Cloud clouds[CLOUD_AMOUNT];
 		 
 		 void keyUp() {
 		 	isKeyPressed = false;
-//		 	if (!isJumping) {
-//		 		//velocityY = 10.0f;
-//		 		if (direction == 1) {
-//		 			velocityX = 10.0f;
-//		 		} else {
-//		 			velocityX = -10.0f;
-//		 		}
-//		 		jump();
-//			 }
-		 	
 		 }
 		 
 		 void prepareJump() {
@@ -456,6 +450,16 @@ Cloud clouds[CLOUD_AMOUNT];
 					velocityX = -velocityX;
 					updateImage();
 				}
+				
+ 				std::vector<Fly>::iterator it = flies.begin();
+ 				while (it != flies.end()) {
+ 					if (it->isCaught(x, y)) {
+ 						it = flies.erase(it);
+ 						score++;
+ 					} else {
+ 						it++;
+ 					}
+ 				}
 				updatePosition();	
 		 	}
 		 }
@@ -487,6 +491,7 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
  		
  		static bool (*reachedAngle[2][2])(float angle);
+ 		
  		
  };
  Image Frog::imageHolder[2][2][2];
@@ -612,9 +617,10 @@ void timer(int value) {
 		clouds[i].updatePositionX();
 	}
 	FlySpawner.update();
-	for (Fly fly : flies) {
-		fly.update();
+	for (int i = 0; i < flies.size(); i++) {
+		flies[i].update();
 	}
+
 	lines.clear();
 	frogs[0].update();
 	frogs[1].update();
