@@ -27,7 +27,7 @@ Image imgBackground;
 Image imgGround;
 
 int Map[MAX_Y][MAX_X]; 
-float gravity = -1.0f;
+float gravity = -1.2f;
 const float LEFT_BOUNDARY =  30.0f;
 const float RIGHT_BOUNDARY = 690.0f;
 
@@ -101,8 +101,52 @@ class Cloud {
 		}
 		
 };
+
 Image Cloud::imgSave;
 Cloud clouds[CLOUD_AMOUNT];
+
+ class Line {
+ 	public:
+ 		static Image imgSave[2];
+ 		static Rect rect;
+ 		Image *img;
+ 		float x, y, angle;
+ 		int player;
+ 		
+ 		Line(int _player, float _x, float _y, float _angle) {
+ 			player = _player;
+ 			x = _x;
+ 			y = _y;
+ 			angle = _angle;
+ 			img = &imgSave[player];
+ 		}
+ 		
+ 		static void loadImage() {
+ 			Image img;
+ 			Load_Texture(&img, "img/Lines.png");
+ 			Crop_Image(&img, &imgSave[0], 0, 0, 8, 4);
+ 			Crop_Image(&img, &imgSave[1], 0, 4, 8, 4);
+ 			Zoom_Image(&imgSave[0], SCALE);
+ 			Zoom_Image(&imgSave[1], SCALE);
+ 			Delete_Image(&img);
+ 			rect.Left = -12.0f;
+ 			rect.Right = 12.0f;
+ 			rect.Bottom = -8.0f;
+ 			rect.Top = 8.0f;
+ 		}
+ 		
+ 		void draw() {
+ 			glTranslatef(x, y, 0.0f);
+ 			glRotatef(angle, 0.0f, 0.0f, 1.0f);
+ 			Map_Texture(img);
+ 			Draw_Rect(&rect);
+ 			glLoadIdentity();
+ 		}
+ 		
+ };
+ Image Line::imgSave[2];
+ Rect Line::rect;
+ std::vector<Line> lines;
  
  class Frog {
  	public:
@@ -111,7 +155,7 @@ Cloud clouds[CLOUD_AMOUNT];
  		static float mapBaseAngle[2];
  		Rect rect;
  		Image *img;
- 		float x, y, speedX, speedY, angle;
+ 		float x, y, velocityX, velocityY, angle;
  		int player, direction, animation, action, angleDirection, score;
  		bool isJumping, isKeyPressed;
  		
@@ -170,65 +214,26 @@ Cloud clouds[CLOUD_AMOUNT];
  		}
 		  
 		 void jump() {
-		 	//printf("\n jump called, isJumping = %d", isJumping);
 		 	if (!isJumping) {
 		 		isJumping = true;
 		 		animation = 1;
 		 		updateImage();
-		 		//printf("\n jumping");
 		 	} 
-		 }
-		 
-		 void update() {
-		 	if (isJumping) {
-		 		//printf("\n update jumping, isJumping = %d", isJumping);
-		 		float oldY = y;
-		 		x += speedX;
-		 		y += speedY;
-		 		speedY += gravity;
-		 		if (speedY < - 24.0f) 
-		 			speedY = -24.0f;
-				if (speedY <= 0.0f) {
-					int col1 = (x - 9.0f) / CELL_SIZE;
-					int col2 = (x + 9.0f) / CELL_SIZE;
-					int oldRow = oldY / CELL_SIZE;
-					int row = y / CELL_SIZE;
-					if ((!Map[oldRow][col1] && !Map[oldRow][col2]) && (Map[row][col1] || Map[row][col2])) {
-						isJumping = false;
-						y = (row + 1) * CELL_SIZE;
-						speedX = 0.0f;
-						speedY = 0.0f;
-						animation = 0;
-						updateImage();
-					}
-				}
-				if (reachedBoundary[direction](x)) {
-					direction = 1 - direction;
-					speedX = -speedX;
-					updateImage();
-				}
-				updatePosition();	
-		 	}
 		 }
 		 
 		 void keyDown() {
 		 	isKeyPressed = true;
-		 	//printf("\nkey pressed");
-		 	//printf("%d", isJumping);
 		 }		
 		 
 		 void keyUp() {
 		 	isKeyPressed = false;
-		 	//printf("\nkey released");
-		 	//printf("%d", isJumping);
 		 	if (!isJumping) {
-		 		speedY = 10.0f;
+		 		//velocityY = 10.0f;
 		 		if (direction == 1) {
-		 			speedX = 10.0f;
+		 			velocityX = 10.0f;
 		 		} else {
-		 			speedX = -10.0f;
+		 			velocityX = -10.0f;
 		 		}
-		 	//if (!isJumping) 
 		 		jump();
 			 }
 		 	
@@ -248,6 +253,72 @@ Cloud clouds[CLOUD_AMOUNT];
 		 	}
 		 }
 		 
+		 void update() {
+		 	if (!isJumping) {
+		 		printf("\n vx = %f, vy = %f, gravity = %f", velocityX, velocityY, gravity);
+		 		if (isKeyPressed) {
+		 			prepareJump();
+		 		} else {
+		 			endPrepareJump();
+		 		}
+		 		if (action > 0) {
+		 			if (action == 2) {
+		 				action = 0;
+		 				jump();
+		 			} else {
+		 				angle += mapOffset[angleDirection];
+		 				if (reachedAngle[direction][angleDirection](angle)) {
+		 					angleDirection = 1 - angleDirection;
+		 				}
+		 				float angle2 = angle / RAD;
+		 				float x2 = x;
+		 				float y2 = y + 4.0f;
+		 				float velocityX2, velocityY2;
+		 				velocityX2 = cos(angle2) * 4 + (direction == 0 ? angle2 - PI : angle2) * 9;
+		 				velocityY2 = sin(angle2) * 21;
+		 				velocityX = velocityX2;
+		 				velocityY = velocityY2;
+		 				for (int i = 0; i < 18; i++) {
+		 					x2 += velocityX2;
+		 					y2 += velocityY2;
+		 					if (i % 3 == 2) {
+		 						angle2 = atan2(velocityY2, velocityX2) * RAD;
+		 						lines.push_back(Line(player, x2, y2, angle2));
+		 					}
+		 					velocityY2 += gravity;
+		 				}	
+		 			}
+		 		}
+		 	} else {
+		 		float oldY = y;
+		 		x += velocityX;
+		 		y += velocityY;
+		 		velocityY += gravity;
+		 		if (velocityY < - 24.0f) {
+		 			velocityY = -24.0f;
+		 		}
+				if (velocityY <= 0.0f) {
+					int col1 = (x - 9.0f) / CELL_SIZE;
+					int col2 = (x + 9.0f) / CELL_SIZE;
+					int oldRow = oldY / CELL_SIZE;
+					int row = y / CELL_SIZE;
+					if ((!Map[oldRow][col1] && !Map[oldRow][col2]) && (Map[row][col1] || Map[row][col2])) {
+						isJumping = false;
+						y = (row + 1) * CELL_SIZE;
+						velocityX = 0.0f;
+						velocityY = 0.0f;
+						animation = 0;
+						updateImage();
+					}
+				}
+				if (reachedBoundary[direction](x)) {
+					direction = 1 - direction;
+					velocityX = -velocityX;
+					updateImage();
+				}
+				updatePosition();	
+		 	}
+		 }
 		 
  		static bool reachedLeftBoundary(float x) {
  			return x < LEFT_BOUNDARY;
@@ -284,54 +355,12 @@ Cloud clouds[CLOUD_AMOUNT];
  bool (*Frog::reachedBoundary[2])(float x) = {Frog::reachedLeftBoundary, Frog::reachedRightBoundary};
  bool (*Frog::reachedAngle[2][2])(float angle) = {
  	{reachedMaxAngleLeft, reachedMinAngleLeft},
- 	{reachedMaxAngleRight, reachedMinAngleRight}
+ 	{reachedMinAngleRight, reachedMaxAngleRight}
  };
  
  Frog frogs[2];
  
- class Line {
- 	public:
- 		static Image imgSave[2];
- 		static Rect rect;
- 		Image *img;
- 		float x, y, angle;
- 		int player;
- 		
- 		Line(int _player, float _x, float _y, float _angle) {
- 			player = _player;
- 			x = _x;
- 			y = _y;
- 			angle = _angle;
- 			img = &imgSave[player];
- 		}
- 		
- 		static void loadImage() {
- 			Image img;
- 			Load_Texture(&img, "img/Lines.png");
- 			Crop_Image(&img, &imgSave[0], 0, 0, 8, 4);
- 			Crop_Image(&img, &imgSave[1], 0, 4, 8, 4);
- 			Zoom_Image(&imgSave[0], SCALE);
- 			Zoom_Image(&imgSave[1], SCALE);
- 			Delete_Image(&img);
- 			rect.Left = -12.0f;
- 			rect.Right = 12.0f;
- 			rect.Bottom = -8.0f;
- 			rect.Top = 8.0f;
- 		}
- 		
- 		void draw() {
- 			glTranslatef(x, y, 0.0f);
- 			glRotatef(angle, 0.0f, 0.0f, 1.0f);
- 			Map_Texture(img);
- 			Draw_Rect(&rect);
- 			glLoadIdentity();
- 		}
- 		
- };
- Image Line::imgSave[2];
- Rect Line::rect;
  
- std::vector<Line> lines;
  
  
  
@@ -348,7 +377,7 @@ void Display() {
 	for (Line line : lines) {
 		line.draw();
 	}
-	
+	//printf("%d",lines.size());
 	for (int i = 0; i < CLOUD_AMOUNT; i++) 
 		clouds[i].draw();
 		
@@ -430,6 +459,7 @@ void initGL() {
 void timer(int value) {
 	for (int i = 0; i < CLOUD_AMOUNT; i++) 
 		clouds[i].updatePositionX();
+	lines.clear();
 	frogs[0].update();
 	frogs[1].update();
 	
