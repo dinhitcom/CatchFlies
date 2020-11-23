@@ -281,6 +281,28 @@ Cloud clouds[CLOUD_AMOUNT];
  };
  FlySpawner FlySpawner(2);
  
+ class Score {
+ 	public:
+ 		static Image imageHolder[10];
+ 		int score;
+ 		Score (int _score) {
+ 			score = _score;
+ 		}
+ 		Rect rect;
+ 		Image *img;
+ 		static void loadImage() {
+ 			Image img;
+ 			Load_Texture(&img, "img/Numbers.png");
+ 			Crop_Image(&img, &imageHolder[0], 0, 0, 10, 6);
+ 			Crop_Image(&img, &imageHolder[1], 0, 6, 10, 6);
+ 			Swap_Image(imageHolder[0].img, 10, 6);
+ 			Swap_Image(imageHolder[1].img, 10, 6);
+ 			Zoom_Image(&imageHolder[0], SCALE);
+ 			Zoom_Image(&imageHolder[1], SCALE);
+ 		}
+ 		
+ };
+ 
  class Frog {
  	public:
  		static Image imageHolder[2][2][2];
@@ -358,6 +380,20 @@ Cloud clouds[CLOUD_AMOUNT];
 		 
 		 void keyUp() {
 		 	isKeyPressed = false;
+		 }
+		 
+		 void lookLeft() {
+		 	if (!isJumping) {
+		 		direction = 0;
+		 		updateImage();
+		 	}
+		 }
+		 
+		 void lookRight() {
+		 	if (!isJumping) {
+		 		direction = 1;
+		 		updateImage();
+		 	}
 		 }
 		 
 		 void prepareJump() {
@@ -626,13 +662,44 @@ void keyboardUp(GLubyte key, int x, int y) {
 	switch (key) {
 		case 32:
 			frogs[0].keyUp();
+			printf("\n space up");
 			break;
+		case 97:
+			frogs[0].lookLeft();
+			printf("\n left up");
+			break;
+		case 100:
+			frogs[0].lookRight();
+			printf("\n right up");
+			break;	
 		case 13:
 			frogs[1].keyUp();
 			break;
 	}
 }
-
+void specialKeyDown(int key, int x, int y) {
+}
+void specialKeyUp(int key, int x, int y) {
+	switch (key) {
+		case GLUT_KEY_LEFT:
+			frogs[1].lookLeft();
+			break;
+		case GLUT_KEY_RIGHT:
+			frogs[1].lookRight();
+			break;
+	}
+}
+//void ProcessSpecialKeys(int key, int x, int y)
+//{
+//    if (key == GLUT_KEY_LEFT)
+//       printf("key left down");
+//}
+//
+//void ReleaseSpecialKeys(int key, int x, int y)
+//{
+//    if (key == GLUT_KEY_LEFT)
+//       printf("key left up");
+//}
 int main(int argc, char **argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
@@ -646,6 +713,10 @@ int main(int argc, char **argv) {
 	glutDisplayFunc(Display);
 	glutKeyboardFunc(keyboardDown);
 	glutKeyboardUpFunc(keyboardUp);
+	glutSpecialFunc(specialKeyDown);
+	glutSpecialUpFunc(specialKeyUp);
+//	glutSpecialFunc(ProcessSpecialKeys);
+//    glutSpecialUpFunc(ReleaseSpecialKeys);
 	glutTimerFunc(0, timer, 0);
 	glutMainLoop();
 	return 0;
