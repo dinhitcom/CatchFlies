@@ -22,7 +22,9 @@
 
 Rect rectBackground = {0, 720, 48, 384}; 
 Rect rectGround = {0, 720, 0, 48};
+Rect title;
 
+Image imgTitle;
 Image imgBackground;
 Image imgGround;
 Image imgNumbers[10];
@@ -30,6 +32,7 @@ int Map[MAX_Y][MAX_X];
 float gravity = -1.2f;
 const float LEFT_BOUNDARY =  30.0f;
 const float RIGHT_BOUNDARY = 690.0f;
+bool isPlaying = false;
 
 class Platformer {
 	public:
@@ -328,6 +331,8 @@ Cloud clouds[CLOUD_AMOUNT];
  };
  Score scores[2];
  
+ 
+ 
  class Frog {
  	public:
  		static Image imageHolder[2][2][2];
@@ -550,50 +555,35 @@ Cloud clouds[CLOUD_AMOUNT];
  	{reachedMaxAngleLeft, reachedMinAngleLeft},
  	{reachedMinAngleRight, reachedMaxAngleRight}
  };
- 
  Frog frogs[2];
  
+ class Timer {
+ 	public:
+ 		Image *imgDigit1, *imgDigit2;
+ 		Rect rect, rect2;
+ 		void init() {
+ 			imgDigit1 = &imgNumbers[0];
+ 			imgDigit2 = &imgNumbers[0];
+ 		}
+ };
  
 //====================================================// 
  
-void Display() {
-	glClear(GL_COLOR_BUFFER_BIT);
-	glLoadIdentity();
-	Map_Texture(&imgBackground);
-	Draw_Rect(&rectBackground);
-	
-	for (Line line : lines) {
-		line.draw();
-	}
-	
-	Map_Texture(&imgGround);
-	Draw_Rect(&rectGround);
-	
-	for (int i = 0; i < CLOUD_AMOUNT; i++) {
-		clouds[i].draw();
-	}
-		
-	for (int i = 0; i < flies.size(); i++) {
-		flies[i].draw();
-	}
-	
-	for (int i = 0; i < PLATFORMER_AMOUNT; i++) {
-		platformers[i].draw();
-	}
-	
-	frogs[0].draw();
-	frogs[1].draw();
-	
-	scores[0].draw();
-	scores[1].draw();
-	glutSwapBuffers();
-}
-
 void loadBackground() {
 	Load_Texture_Swap(&imgBackground, "img/Background.png");
 	Zoom_Image(&imgBackground, SCALE);
 	Load_Texture_Swap(&imgGround, "img/Ground.png");
 	Zoom_Image(&imgGround, SCALE);
+}
+
+void loadAndInitTitle() {
+	Load_Texture_Swap(&imgTitle, "img/Title.png");
+	//Zoom_Image(&imgTitle, 2);
+	Image *img = &imgTitle;
+	title.Left = (WIDTH - img->w) / 2;
+	title.Right = title.Left + img->w;
+	title.Bottom = (HEIGHT - img->h) / 2;
+	title.Top = title.Bottom + img->h;
 }
 
 void initMap() {
@@ -642,6 +632,7 @@ void initNumbers() {
 
 void initGame() {
 	loadBackground();
+	loadAndInitTitle();
 	initMap();	
 	initPlatformers();
 	initClouds(); 
@@ -671,6 +662,43 @@ void initGL() {
 	glEnable(GL_TEXTURE_2D);
 }
 
+void Display() {
+	glClear(GL_COLOR_BUFFER_BIT);
+	glLoadIdentity();
+	Map_Texture(&imgBackground);
+	Draw_Rect(&rectBackground);
+	Map_Texture(&imgGround);
+	Draw_Rect(&rectGround);
+	
+	for (int i = 0; i < CLOUD_AMOUNT; i++) {
+		clouds[i].draw();
+	}
+	
+	if (!isPlaying) {
+		Map_Texture(&imgTitle);
+		Draw_Rect(&title);	
+	} else {
+		for (Line line : lines) {
+		line.draw();
+	}
+		
+	for (int i = 0; i < flies.size(); i++) {
+		flies[i].draw();
+	}
+	
+	for (int i = 0; i < PLATFORMER_AMOUNT; i++) {
+		platformers[i].draw();
+	}
+	
+	frogs[0].draw();
+	frogs[1].draw();
+	
+	scores[0].draw();
+	scores[1].draw();
+	}	
+	glutSwapBuffers();
+}
+
 void timer(int value) {
 	for (int i = 0; i < CLOUD_AMOUNT; i++) {
 		clouds[i].updatePositionX();
@@ -689,46 +717,63 @@ void timer(int value) {
 }
 
 void keyboardDown(GLubyte key, int x, int y) {
-	switch (key) {
-		case 32:
-			frogs[0].keyDown();
-			break;
-		case 13:
-			frogs[1].keyDown();
-			break;
+	if (isPlaying) {
+		switch (key) {
+			case 32:
+				frogs[0].keyDown();
+				break;
+			case 13:
+				frogs[1].keyDown();
+				break;
+			case 97:
+				frogs[0].lookLeft();
+				break;
+			case 100:
+				frogs[0].lookRight();
+				break;		
+		}	
+	} else {
+		switch (key) {
+			
+		}
 	}
 }
 
 void keyboardUp(GLubyte key, int x, int y) {
-	switch (key) {
-		case 32:
-			frogs[0].keyUp();
-			printf("\n space up");
-			break;
-		case 97:
-			frogs[0].lookLeft();
-			printf("\n left up");
-			break;
-		case 100:
-			frogs[0].lookRight();
-			printf("\n right up");
-			break;	
-		case 13:
-			frogs[1].keyUp();
-			break;
+	if (isPlaying) {
+		switch (key) {
+			case 32:
+				frogs[0].keyUp();
+				break;	
+			case 13:
+				frogs[1].keyUp();
+				break;
+		}	
+	} else {
+		switch (key) {
+			case 27:
+				initGame();
+				break;
+			case 32:
+				isPlaying = true;
+				break;
+		}
 	}
 }
 void specialKeyDown(int key, int x, int y) {
+	if (isPlaying) {
+		switch (key) {
+			case GLUT_KEY_LEFT:
+				frogs[1].lookLeft();
+				break;
+			case GLUT_KEY_RIGHT:
+				frogs[1].lookRight();
+				break;
+		}
+	}
 }
 void specialKeyUp(int key, int x, int y) {
-	switch (key) {
-		case GLUT_KEY_LEFT:
-			frogs[1].lookLeft();
-			break;
-		case GLUT_KEY_RIGHT:
-			frogs[1].lookRight();
-			break;
-	}
+		
 }
 
 int main(int argc, char **argv) {
