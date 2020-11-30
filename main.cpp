@@ -9,7 +9,7 @@
 #define HEIGHT 384
 #define SCALE 3
 #define INTERVAL 15
-
+#define MATCH_DURATION 90
 #define PLATFORMER_AMOUNT 6
 #define CLOUD_AMOUNT 3
 
@@ -22,17 +22,21 @@
 
 Rect rectBackground = {0, 720, 48, 384}; 
 Rect rectGround = {0, 720, 0, 48};
-Rect title;
+Rect title, result, continueKey;
 
 Image imgTitle;
+Image imgContinueKey;
 Image imgBackground;
 Image imgGround;
 Image imgNumbers[10];
-int Map[MAX_Y][MAX_X]; 
+Image imgResults[3];
+int Map[MAX_Y][MAX_X];
+int time, counter = 0; 
 float gravity = -1.2f;
 const float LEFT_BOUNDARY =  30.0f;
 const float RIGHT_BOUNDARY = 690.0f;
 bool isPlaying = false;
+bool isMatchEnd = false;
 
 class Platformer {
 	public:
@@ -557,16 +561,36 @@ Cloud clouds[CLOUD_AMOUNT];
  };
  Frog frogs[2];
  
- class Timer {
+ class TimerClock {
  	public:
  		Image *imgDigit1, *imgDigit2;
  		Rect rect, rect2;
- 		void init() {
- 			imgDigit1 = &imgNumbers[0];
- 			imgDigit2 = &imgNumbers[0];
+ 		void init(int duration) {	
+ 			imgDigit1 = &imgNumbers[duration / 10];
+ 			imgDigit2 = &imgNumbers[duration % 10];
+ 			rect.Left = (WIDTH - (6 * SCALE * 2 + 2)) / 2;
+			rect.Right = rect.Left + 6 * SCALE;
+			rect.Bottom = HEIGHT - (7 * SCALE + 10);
+			rect.Top = rect.Bottom + 7 * SCALE;
+			rect2.Left = rect.Right + 2;
+			rect2.Right = rect2.Left + 6 * SCALE;
+			rect2.Bottom = rect.Bottom;
+			rect2.Top = rect.Top;
+ 		}
+ 		void updateTime(int time) {
+			int digit1 = time / 10;
+			int digit2 = time % 10;
+			imgDigit1 = &imgNumbers[digit1];
+ 			imgDigit2 = &imgNumbers[digit2];
+		}
+ 		void draw() {
+ 			Map_Texture(imgDigit1);
+			Draw_Rect(&rect);
+			Map_Texture(imgDigit2);
+			Draw_Rect(&rect2);
  		}
  };
- 
+ TimerClock timerClock;
 //====================================================// 
  
 void loadBackground() {
@@ -584,6 +608,26 @@ void loadAndInitTitle() {
 	title.Right = title.Left + img->w;
 	title.Bottom = (HEIGHT - img->h) / 2;
 	title.Top = title.Bottom + img->h;
+}
+
+void loadAndInitContinueKey() {
+	Load_Texture_Swap(&imgContinueKey, "img/ContinueKey.png");
+	Image *img = &imgContinueKey;
+	continueKey.Left = (WIDTH - img->w) / 2 - 10;
+	continueKey.Right = continueKey.Left + img->w;
+	continueKey.Bottom = 5;
+	continueKey.Top = continueKey.Bottom + img->h - 3;
+}
+
+void loadAndInitResults() {
+	Load_Texture_Swap(&imgResults[0], "img/Result1.png");
+	Load_Texture_Swap(&imgResults[1], "img/Result2.png");
+	Load_Texture_Swap(&imgResults[2], "img/Result3.png");
+	Image *img = &imgResults[0];
+	result.Left = (WIDTH - img->w) / 2;
+	result.Right = title.Left + img->w;
+	result.Bottom = (HEIGHT - img->h) / 2;
+	result.Top = title.Bottom + img->h;
 }
 
 void initMap() {
@@ -630,6 +674,22 @@ void initNumbers() {
    	Delete_Image(&img);
 }
 
+void showResult(int score1, int score2) {
+	if (score1 > score2) {
+		Map_Texture(&imgResults[0]);
+		Draw_Rect(&result);
+	} else 
+		if (score1 < score2) {
+			Map_Texture(&imgResults[1]);
+			Draw_Rect(&result);
+		} else {
+			Map_Texture(&imgResults[2]);
+			Draw_Rect(&result);	
+		}
+	Map_Texture(&imgContinueKey);
+	Draw_Rect(&continueKey);
+}
+
 void initGame() {
 	loadBackground();
 	loadAndInitTitle();
@@ -640,8 +700,13 @@ void initGame() {
 	Line::loadImage();
 	Fly::loadImage();
 	initNumbers();
+	loadAndInitResults();
+	loadAndInitContinueKey();
 	scores[0].init(0);
 	scores[1].init(1);
+	timerClock.init(MATCH_DURATION);
+	isMatchEnd = false;
+	time = MATCH_DURATION;
 }
 
 
@@ -674,27 +739,33 @@ void Display() {
 		clouds[i].draw();
 	}
 	
-	if (!isPlaying) {
+	if (!isPlaying && !isMatchEnd) {
 		Map_Texture(&imgTitle);
 		Draw_Rect(&title);	
 	} else {
-		for (Line line : lines) {
-		line.draw();
-	}
+		timerClock.draw();
+		if (!isMatchEnd) {
+			for (Line line : lines) {
+				line.draw();
+			}
+		}
 		
-	for (int i = 0; i < flies.size(); i++) {
-		flies[i].draw();
+		for (int i = 0; i < flies.size(); i++) {
+			flies[i].draw();
+		}
+	
+		for (int i = 0; i < PLATFORMER_AMOUNT; i++) {
+			platformers[i].draw();
+		}
+	
+		frogs[0].draw();
+		frogs[1].draw();
+	
+		scores[0].draw();
+		scores[1].draw();
 	}
-	
-	for (int i = 0; i < PLATFORMER_AMOUNT; i++) {
-		platformers[i].draw();
-	}
-	
-	frogs[0].draw();
-	frogs[1].draw();
-	
-	scores[0].draw();
-	scores[1].draw();
+	if (isMatchEnd) {
+		showResult(frogs[0].score, frogs[1].score);
 	}	
 	glutSwapBuffers();
 }
@@ -711,6 +782,19 @@ void timer(int value) {
 	lines.clear();
 	frogs[0].update();
 	frogs[1].update();
+	
+	if (counter < 66) {
+		counter++;
+	} else {
+		counter = 0;
+		time--;
+		if (time >= 0) {
+			timerClock.updateTime(time);	
+		} else {
+			isMatchEnd = true;
+			isPlaying = false;
+		}
+	}
 	
 	glutPostRedisplay();
 	glutTimerFunc(INTERVAL, timer, 0);
@@ -755,7 +839,9 @@ void keyboardUp(GLubyte key, int x, int y) {
 				initGame();
 				break;
 			case 32:
-				isPlaying = true;
+				if (!isMatchEnd) {
+					isPlaying = true;
+				}
 				break;
 		}
 	}
