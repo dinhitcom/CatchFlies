@@ -25,7 +25,7 @@ Rect rectGround = {0, 720, 0, 48};
 
 Image imgBackground;
 Image imgGround;
-
+Image imgNumbers[10];
 int Map[MAX_Y][MAX_X]; 
 float gravity = -1.2f;
 const float LEFT_BOUNDARY =  30.0f;
@@ -283,25 +283,50 @@ Cloud clouds[CLOUD_AMOUNT];
  
  class Score {
  	public:
- 		static Image imageHolder[10];
- 		int score;
- 		Score (int _score) {
- 			score = _score;
- 		}
- 		Rect rect;
- 		Image *img;
- 		static void loadImage() {
- 			Image img;
- 			Load_Texture(&img, "img/Numbers.png");
- 			Crop_Image(&img, &imageHolder[0], 0, 0, 10, 6);
- 			Crop_Image(&img, &imageHolder[1], 0, 6, 10, 6);
- 			Swap_Image(imageHolder[0].img, 10, 6);
- 			Swap_Image(imageHolder[1].img, 10, 6);
- 			Zoom_Image(&imageHolder[0], SCALE);
- 			Zoom_Image(&imageHolder[1], SCALE);
- 		}
+ 		Image *imgDigit1, *imgDigit2;
+ 		Rect rect, rect2;
  		
+ 		void init(int player) {
+ 			imgDigit1 = &imgNumbers[0];
+ 			imgDigit2 = &imgNumbers[0];
+ 			if (player == 0) {
+ 				rect.Left = 10;
+				rect.Right = rect.Left + 6 * SCALE;
+				rect.Bottom = 5;
+				rect.Top = rect.Bottom + 7 * SCALE;
+				rect2.Left = rect.Right + 2;
+				rect2.Right = rect2.Left + 6 * SCALE;
+				rect2.Bottom = rect.Bottom;
+				rect2.Top = rect.Top;
+ 			} else 
+			 	if (player == 1) {
+ 					rect.Left = WIDTH - (10 + 2 + 6 * SCALE * 2);
+					rect.Right = rect.Left + 6 * SCALE;
+					rect.Bottom = 5;
+					rect.Top = rect.Bottom + 7 * SCALE;
+					rect2.Left = rect.Right + 2;
+					rect2.Right = rect2.Left + 6 * SCALE;
+					rect2.Bottom = rect.Bottom;
+					rect2.Top = rect.Top;
+ 				}	
+			
+		}
+		
+		void updateScore(int score) {
+			int digit1 = score / 10;
+			int digit2 = score % 10;
+			imgDigit1 = &imgNumbers[digit1];
+ 			imgDigit2 = &imgNumbers[digit2];
+		}
+		
+		void draw() {
+			Map_Texture(imgDigit1);
+			Draw_Rect(&rect);
+			Map_Texture(imgDigit2);
+			Draw_Rect(&rect2);
+		}
  };
+ Score scores[2];
  
  class Frog {
  	public:
@@ -478,6 +503,7 @@ Cloud clouds[CLOUD_AMOUNT];
  					if (it->isCaught(x, y)) {
  						it = flies.erase(it);
  						score++;
+ 						scores[player].updateScore(score);
  					} else {
  						it++;
  					}
@@ -558,6 +584,8 @@ void Display() {
 	frogs[0].draw();
 	frogs[1].draw();
 	
+	scores[0].draw();
+	scores[1].draw();
 	glutSwapBuffers();
 }
 
@@ -602,6 +630,16 @@ void initFrogs() {
 	frogs[1].init(1);
 }
 
+void initNumbers() {
+ 	Image img;
+ 	Load_Texture_Swap(&img, "img/Numbers.png");
+ 	for (int i = 0; i < 10; i++) {
+        Crop_Image(&img, &imgNumbers[i], i * 6, 0, 6, 7);
+        Zoom_Image(&imgNumbers[i], SCALE);
+   		}
+   	Delete_Image(&img);
+}
+
 void initGame() {
 	loadBackground();
 	initMap();	
@@ -610,6 +648,9 @@ void initGame() {
 	initFrogs();
 	Line::loadImage();
 	Fly::loadImage();
+	initNumbers();
+	scores[0].init(0);
+	scores[1].init(1);
 }
 
 
@@ -689,17 +730,7 @@ void specialKeyUp(int key, int x, int y) {
 			break;
 	}
 }
-//void ProcessSpecialKeys(int key, int x, int y)
-//{
-//    if (key == GLUT_KEY_LEFT)
-//       printf("key left down");
-//}
-//
-//void ReleaseSpecialKeys(int key, int x, int y)
-//{
-//    if (key == GLUT_KEY_LEFT)
-//       printf("key left up");
-//}
+
 int main(int argc, char **argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
@@ -715,8 +746,6 @@ int main(int argc, char **argv) {
 	glutKeyboardUpFunc(keyboardUp);
 	glutSpecialFunc(specialKeyDown);
 	glutSpecialUpFunc(specialKeyUp);
-//	glutSpecialFunc(ProcessSpecialKeys);
-//    glutSpecialUpFunc(ReleaseSpecialKeys);
 	glutTimerFunc(0, timer, 0);
 	glutMainLoop();
 	return 0;
